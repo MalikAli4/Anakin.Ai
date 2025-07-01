@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Anakin</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      background: #f3f2ef;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .container {
+      background: rgba(255,255,255,0.85);
+      padding: 40px 30px;
+      border-radius: 18px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 {
+      font-size: 2.6rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 20px;
+      letter-spacing: -0.5px;
+      text-align: center;
+    }
+    #chat-form {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    #user-input {
+      flex: 1;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 12px;
+      background-color: #e9e9e9;
+      color: #333;
+      font-size: 1rem;
+    }
+    #user-input::placeholder {
+      color: #999;
+    }
+    #submit-btn {
+      background-color: transparent;
+      padding: 0;
+      border: none;
+      cursor: pointer;
+    }
+    #submit-btn:disabled svg {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    #submit-btn svg {
+      width: 28px;
+      height: 28px;
+      fill: #444;
+      transition: fill 0.3s ease;
+    }
+    #submit-btn:hover:not(:disabled) svg {
+      fill: #666;
+    }
+
+    .response {
+      display: none;
+      text-align: left;
+      padding: 18px;
+      background: #ececec;
+      border-radius: 12px;
+      white-space: pre-wrap;
+      font-size: 1rem;
+      color: #333;
+      border: none;
+      margin-bottom: 20px;
+    }
+    .response.visible {
+      display: block;
+    }
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.85);
+      padding: 18px;
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+      text-align: left;
+      color: #444;
+    }
+    .card h3 {
+      margin-bottom: 10px;
+      font-size: 1.1rem;
+      color: #222;
+    }
+    .card p {
+      font-size: 0.95rem;
+      color: #555;
+    }
+
+    .chat-sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 220px;
+      height: 100%;
+      background-color: #ddd;
+      backdrop-filter: blur(8px);
+      color: #222;
+      padding: 56px 20px 20px;
+      overflow-y: auto;
+      border-right: 1px solid #bbb;
+      box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+      z-index: 10;
+      transition: transform 0.3s ease;
+    }
+    .chat-sidebar.hidden {
+      transform: translateX(-100%);
+    }
+    .sidebar-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+    .sidebar-btn {
+  background: none;
+  border: 1px solid transparent; /* invisible by default */
+  color: #111;
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  width: 100%;
+  transition: background 0.2s ease, border 0.2s ease;
+  font-weight: 500;
+}
+
+.sidebar-btn:hover {
+  background-color: #e7e7e7;
+  border-color: #aaa; /* becomes visible on hover */
+}
+
+    #chat-history li {
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #eee;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: 0.3s;
+    }
+    #chat-history li:hover {
+      background-color: #e0e0e0;
+    }
+
+    #toggleSidebarBtn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 20;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    #toggleSidebarBtn svg {
+      width: 26px;
+      height: 26px;
+      fill: #444;
+    }
+  </style>
+</head>
+<body>
+  <button id="toggleSidebarBtn" aria-label="Toggle Logs">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 5h16v2H4V5zm0 6h16v2H4v-2zm0 6h10v2H4v-2z"/>
+    </svg>
+  </button>
+
+  <div id="chat-sidebar" class="chat-sidebar">
+    <div class="sidebar-controls">
+      <button class="sidebar-btn" onclick="startNewChat()">+ New Chat</button>
+      <button class="sidebar-btn" onclick="searchChat()">🔍 Search Chat</button>
+    </div>
+    <ul id="chat-history"></ul>
+  </div>
+
+  <div class="container">
+    <h1>Anakin</h1>
+    <form id="chat-form">
+      <input type="text" id="user-input" placeholder="Ask Anakin anything...">
+      <button type="submit" id="submit-btn" disabled>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+        </svg>
+      </button>
+    </form>
+    <div id="response-output" class="response"></div>
+    <div class="dashboard">
+      <div class="card"><h3>📰 News</h3><p>Top headlines coming soon...</p></div>
+      <div class="card" id="weather-card"><h3>⛅ Weather</h3><p>Detecting your location...</p></div>
+      <div class="card"><h3>📓 Journal</h3><p>Your recent thoughts and actions.</p></div>
+      <div class="card"><h3>📸 Media</h3><p>Photo and Video Editing</p></div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("toggleSidebarBtn").onclick = () => {
+      document.getElementById("chat-sidebar").classList.toggle("hidden");
+    };
+
+    function startNewChat() {
+      const history = document.getElementById("chat-history");
+      const responseOutput = document.getElementById("response-output");
+      const input = document.getElementById("user-input");
+      if (history.children.length > 0) {
+        const archive = document.createElement("li");
+        archive.textContent = `Chat ${new Date().toLocaleTimeString()}`;
+        history.appendChild(archive);
+      }
+      input.value = "";
+      responseOutput.innerHTML = "";
+      responseOutput.classList.remove("visible");
+    }
+
+    function searchChat() {
+      alert("Search chat feature coming soon.");
+    }
+
+    const userInput = document.getElementById("user-input");
+    const submitBtn = document.getElementById("submit-btn");
+    const responseOutput = document.getElementById("response-output");
+
+    userInput.addEventListener("input", () => {
+      submitBtn.disabled = userInput.value.trim() === "";
+    });
+
+    function displayResponse(responseText) {
+      responseOutput.innerHTML = `<p>${responseText}</p>`;
+      responseOutput.classList.add("visible");
+    }
+
+    function addToHistory(prompt, response) {
+      const li = document.createElement("li");
+      li.textContent = prompt.length > 30 ? prompt.slice(0, 30) + "..." : prompt;
+      li.onclick = () => {
+        document.getElementById("user-input").value = prompt;
+        displayResponse(response);
+      };
+      document.getElementById("chat-history").prepend(li);
+    }
+
+    async function handleSubmit() {
+  const input = userInput.value.trim();
+  if (!input) return;
+
+  displayResponse("Thinking...");
+  submitBtn.disabled = true;
+
+  try {
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: input })
+    });
+
+    const data = await res.json();
+    const response = data.response || data.error || "No response.";
+    displayResponse(response);
+    addToHistory(input, response);
+  } catch (err) {
+    displayResponse("Something went wrong. Please try again.");
+  }
+
+  userInput.value = "";
+  submitBtn.disabled = true;
+  }
+
+
+    
+
+    document.getElementById("chat-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      handleSubmit();
+    });
+
+    async function getWeather() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          const apiKey = "dedfe07daba0c8a4863f5004ede1490c";
+          const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`;
+          try {
+            const res = await fetch(url);
+            const data = await res.json();
+            const temp = Math.round(data.main.temp);
+            const city = data.name;
+            const desc = data.weather[0].description;
+            document.getElementById("weather-card").innerHTML = `
+              <h3>⛅ Weather</h3>
+              <p><strong>${temp}°F</strong> in ${city}<br>${desc}</p>`;
+          } catch (err) {
+            document.getElementById("weather-card").innerHTML = `<h3>⛅ Weather</h3><p>Unable to fetch data.</p>`;
+          }
+        });
+      }
+    }
+    window.onload = getWeather;
+  </script>
+</body>
+</html>
